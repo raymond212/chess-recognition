@@ -6,10 +6,7 @@ import os
 from sklearn.model_selection import train_test_split
 from keras.layers import Dense, Flatten, Conv2D, Dropout, MaxPooling2D
 from keras.models import model_from_json
-from keras.preprocessing import image
 from pathlib import Path
-from PIL import Image
-from scipy import misc
 
 pieces = ['wk', 'wq', 'wr', 'wb', 'wn', 'wp', 'bk', 'bq', 'br', 'bb', 'bn', 'bp']
 idx_to_label = pieces + ['e']
@@ -150,7 +147,7 @@ def test_additional():
     f_list = []
 
     for f in os.listdir('images/testing'):
-        img_arr_list.append(get_img_array_from_path(f'images/testing/{f}'))
+        img_arr_list.append(resize(path_to_img_array(f'images/testing/{f}')))
         f_list.append(f)
 
     img_arr_list = np.array(img_arr_list)
@@ -172,33 +169,29 @@ def test_additional():
     print(f'Predicted {cnt} out of {len(results)} correctly - {100 * cnt / len(results):.3f}%')
 
 
-def predict(img):
+def predict(img_arr):
     f = Path('model_structure.json')
     model = model_from_json(f.read_text())
     model.load_weights('model_weights.h5')
 
-    result = model(np.array([img]))[0]
+    result = model(np.array([img_arr]))[0]
 
     predicted_idx = int(np.argmax(result))
     return idx_to_label[predicted_idx]
 
 
-def get_img_array_from_path(directory):
-    img = image.load_img(directory, target_size=(size, size))
-    return image.img_to_array(img)
+def path_to_img_array(directory):
+    img = cv.imread(directory)
+    return img
 
 
 def resize(img_arr):
-    img = Image.fromarray(img_arr.astype(np.uint8))
-    img.save('temp.png')
-    img = get_img_array_from_path('temp.png')
-    # os.remove('temp.png')
-    return img
+    return cv.resize(img_arr, dsize=(size, size), interpolation=cv.INTER_CUBIC)
 
 
 def overlay(foreground, background):
     foreground_colors = foreground[:, :, :3]
-    alpha_channel = foreground[:, :, 3] / 255  # 0-255 => 0.0-1.0
+    alpha_channel = foreground[:, :, 3] / 255
     alpha_mask = alpha_channel[:, :, np.newaxis]
     composite = background * (1 - alpha_mask) + foreground_colors * alpha_mask
     return composite.astype('uint8')
@@ -221,8 +214,8 @@ def save_img(data, location):
 
 
 if __name__ == '__main__':
-    scrape_images()
-    generate_data()
-    train()
+    # scrape_images()
+    # generate_data()
+    # train()
     # test()
     test_additional()
